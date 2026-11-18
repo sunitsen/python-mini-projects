@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Titanic Dataset Viewer | Pandas & Flask</title>
+    <!-- Separated CSS file -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+
+    <!-- Header -->
+    <div class="header">
+        <div class="header-title">
+            <h1>🚢 Titanic Dataset Explorer</h1>
+            <p>Pandas DataFrame visualized with modular HTML & CSS on Localhost</p>
+        </div>
+    </div>
+
+    <!-- Summary KPI Cards -->
+    <div class="stats-grid">
+        <div class="stat-card">
+            <span class="label">Total Passengers</span>
+            <span class="value">{{ total_passengers }}</span>
+            <span class="subtext">100% of dataset sample</span>
+        </div>
+        <div class="stat-card">
+            <span class="label">Total Survived</span>
+            <span class="value" style="color: #16a34a;">{{ survived_count }}</span>
+            <span class="subtext">{{ survival_rate }}% Survival Rate</span>
+        </div>
+        <div class="stat-card">
+            <span class="label">Average Age</span>
+            <span class="value">{{ avg_age }} yrs</span>
+            <span class="subtext">Min: {{ min_age }} | Max: {{ max_age }}</span>
+        </div>
+        <div class="stat-card">
+            <span class="label">Average Ticket Fare</span>
+            <span class="value">${{ avg_fare }}</span>
+            <span class="subtext">Max Fare: ${{ max_fare }}</span>
+        </div>
+    </div>
+
+    <!-- Controls (Search & Filters) -->
+    <div class="controls-card">
+        <div class="search-box">
+            <input type="text" id="searchInput" placeholder="🔍 Search passenger name, ticket, cabin..." onkeyup="filterTable()">
+        </div>
+        <div class="filters">
+            <select id="survivedFilter" onchange="filterTable()">
+                <option value="ALL">All Outcomes</option>
+                <option value="1">🟢 Survived Only</option>
+                <option value="0">🔴 Died Only</option>
+            </select>
+            <select id="classFilter" onchange="filterTable()">
+                <option value="ALL">All Ticket Classes</option>
+                <option value="1st Class">1st Class (Upper)</option>
+                <option value="2nd Class">2nd Class (Middle)</option>
+                <option value="3rd Class">3rd Class (Lower)</option>
+            </select>
+            <select id="genderFilter" onchange="filterTable()">
+                <option value="ALL">All Genders</option>
+                <option value="male">Male</option>
+                <option value="female">Female</option>
+            </select>
+        </div>
+    </div>
+
+    <!-- Data Table Card -->
+    <div class="table-card">
+        <div class="table-scroll">
+            <table id="dataTable">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Status</th>
+                        <th>Class</th>
+                        <th>Passenger Name</th>
+                        <th>Sex</th>
+                        <th>Age</th>
+                        <th>SibSp</th>
+                        <th>Parch</th>
+                        <th>Ticket</th>
+                        <th>Fare ($)</th>
+                        <th>Cabin</th>
+                        <th>Embarked</th>
+                    </tr>
+                </thead>
+                <tbody id="tableBody">
+                    {% for row in rows %}
+                    <tr data-survived="{{ row.Survived }}" data-pclass="{{ row.Pclass_Label }}" data-gender="{{ row.Sex }}">
+                        <td><strong>{{ row.PassengerId }}</strong></td>
+                        <td>
+                            {% if row.Survived == 1 %}
+                                <span class="badge badge-survived">🟢 Survived</span>
+                            {% else %}
+                                <span class="badge badge-died">🔴 Died</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if row.Pclass == 1 %}
+                                <span class="badge badge-class1">⭐ 1st Class</span>
+                            {% elif row.Pclass == 2 %}
+                                <span class="badge badge-class2">🥈 2nd Class</span>
+                            {% else %}
+                                <span class="badge badge-class3">🥉 3rd Class</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ row.Name }}</td>
+                        <td style="text-transform: capitalize;">{{ row.Sex }}</td>
+                        <td>{{ row.Age if row.Age != "nan" else "-" }}</td>
+                        <td>{{ row.SibSp }}</td>
+                        <td>{{ row.Parch }}</td>
+                        <td><code>{{ row.Ticket }}</code></td>
+                        <td>${{ "%.2f"|format(row.Fare) }}</td>
+                        <td>{{ row.Cabin if row.Cabin != "nan" else "-" }}</td>
+                        <td>{{ row.Embarked if row.Embarked != "nan" else "-" }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <div class="footer-info">
+            <span id="rowCount">Showing {{ total_passengers }} passengers</span>
+            <span>Dataset: <code>datasciencedojo/titanic.csv</code></span>
+        </div>
+    </div>
+
+    <!-- Client-side Interactive Filter Script -->
+    <script>
+        function filterTable() {
+            const query = document.getElementById('searchInput').value.toLowerCase();
+            const survivedFilter = document.getElementById('survivedFilter').value;
+            const classFilter = document.getElementById('classFilter').value;
+            const genderFilter = document.getElementById('genderFilter').value;
+
+            const rows = document.querySelectorAll('#tableBody tr');
+            let visibleCount = 0;
+
+            rows.forEach(row => {
+                const text = row.innerText.toLowerCase();
+                const survived = row.getAttribute('data-survived');
+                const pclass = row.getAttribute('data-pclass');
+                const gender = row.getAttribute('data-gender');
+
+                const matchesSearch = text.includes(query);
+                const matchesSurvived = (survivedFilter === 'ALL' || survived === survivedFilter);
+                const matchesClass = (classFilter === 'ALL' || pclass === classFilter);
+                const matchesGender = (genderFilter === 'ALL' || gender === genderFilter);
+
+                if (matchesSearch && matchesSurvived && matchesClass && matchesGender) {
+                    row.style.display = '';
+                    visibleCount++;
+                } else {
+                    row.style.display = 'none';
+                }
+            });
+
+            document.getElementById('rowCount').innerText = `Showing ${visibleCount} of {{ total_passengers }} passengers`;
+        }
+    </script>
+</body>
+</html>
